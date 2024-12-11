@@ -7,8 +7,7 @@ import uuid
 
 client_id = str(uuid.uuid4())
 
-
-def build_json(text, negative):
+def build_json(text, negative, model):
     workflow = """
     {
     "3": {
@@ -158,6 +157,7 @@ def build_json(text, negative):
     workflow["6"]["inputs"]["text"] = text
     workflow["3"]["inputs"]["seed"] = random.getrandbits(64)
     workflow["7"]["inputs"]["text"] = negative
+    workflow["4"]["inputs"]["ckpt_name"] = model
     return {"prompt": workflow, "client_id": client_id}
 
 #takes json prompt, returns int prompt_id
@@ -185,14 +185,14 @@ async def listen_image(server_address, id):
                 if current_node == "9": #save_image_websocket_node
                     image_data = msg[8:]
 
-async def gen_image(server_address, text, negative=None, anime=False):
+async def gen_image(server_address, text,  model, negative=None, anime=False,):
     if anime:
         positive = "masterpiece, (best quality), newest, recent, 1girl, extreme detailed, " + text
         neg = "embedding:EasyNegative.pt,(worst quality),(low quality),(normal quality), text, watermark, lowres, (bad anatomy), (bad hands), error, missing fingers,extra digit,fewer digits,cropped,jpeg artifacts,signature,watermark,username,blurry, old,furry," + (negative if negative else "")
     else:
         positive = "masterpiece, (best quality), " + text
         neg = "embedding:EasyNegative.pt,(worst quality),(low quality),(normal quality), text, watermark, lowres"
-    prompt = build_json(positive, negative)
+    prompt = build_json(positive, negative, model)
     id = await send_prompt(server_address, prompt)
     image = await listen_image(server_address, id)
     return image, id
